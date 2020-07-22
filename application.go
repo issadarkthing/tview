@@ -208,8 +208,7 @@ func (a *Application) EnableMouse(enable bool) *Application {
 	return a
 }
 
-// Run starts the application and thus the event loop. This function returns
-// when Stop() was called.
+// Run starts the application and thus the event loop. This function returns when Stop() was called.
 func (a *Application) Run() error {
 	var (
 		err           error
@@ -286,12 +285,13 @@ func (a *Application) Run() error {
 				panic(err)
 			}
 
+			a.draw()
+
+
 			// We have a new screen. Keep going.
 			a.Lock()
 			a.screen = screen
 			a.Unlock()
-
-			a.draw()
 		}
 	}()
 
