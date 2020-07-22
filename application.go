@@ -726,5 +726,5 @@ func (a *Application) QueueUpdateDraw(f func()) *Application {
 // It is not recommended for event to be nil.
 func (a *Application) QueueEvent(event tcell.Event) *Application {
 	a.events <- event
-	return a
+	return a 
 }
