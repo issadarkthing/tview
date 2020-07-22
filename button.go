@@ -151,7 +151,7 @@ func (b *Button) MouseHandler() func(action MouseAction, event *tcell.EventMouse
 			}
 			consumed = true
 		}
-
+	
 		return
 	})
 }
