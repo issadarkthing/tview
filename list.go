@@ -57,6 +57,9 @@ type List struct {
 	// The number of list items skipped at the top before the first item is drawn.
 	offset int
 
+	// Last index of seeable item
+	last int
+
 	// An optional function which is called when the user has navigated to a list
 	// item.
 	changed func(index int, mainText, secondaryText string, shortcut rune)
@@ -67,6 +70,7 @@ type List struct {
 
 	// An optional function which is called when the user presses the Escape key.
 	done func()
+
 }
 
 // NewList returns a new form.
@@ -430,6 +434,7 @@ func (l *List) Draw(screen tcell.Screen) {
 		}
 
 		if y >= bottomLimit {
+			l.last = index
 			break
 		}
 
@@ -473,6 +478,16 @@ func (l *List) Draw(screen tcell.Screen) {
 			y++
 		}
 	}
+}
+
+// GeGetFirst returns the first index of item drawn
+func (l *List) GetFirst() int {
+	return l.offset
+}
+
+// GetLast returns the last index of item drawn
+func (l *List) GetLast() int {
+	return l.last
 }
 
 // InputHandler returns the handler for this primitive.
