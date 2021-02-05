@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 )
 
 const (
@@ -193,7 +193,7 @@ func (a *Application) SetScreen(screen tcell.Screen) *Application {
 	return a
 }
 
-// EnableMouse enables mouse events.
+// EnableMouse enables mouse events or disables them (if "false" is provided).
 func (a *Application) EnableMouse(enable bool) *Application {
 	a.Lock()
 	defer a.Unlock()
@@ -212,10 +212,9 @@ func (a *Application) EnableMouse(enable bool) *Application {
 // when Stop() was called.
 func (a *Application) Run() error {
 	var (
-		err           error
-		width, height int         // The current size of the screen.
-		lastRedraw    time.Time   // The time the screen was last redrawn.
-		redrawTimer   *time.Timer // A timer to schedule the next redraw.
+		err         error
+		lastRedraw  time.Time   // The time the screen was last redrawn.
+		redrawTimer *time.Timer // A timer to schedule the next redraw.
 	)
 	a.Lock()
 
@@ -283,11 +282,15 @@ func (a *Application) Run() error {
 			// We have a new screen. Keep going.
 			a.Lock()
 			a.screen = screen
+			enableMouse := a.enableMouse
 			a.Unlock()
 
 			// Initialize and draw this screen.
 			if err := screen.Init(); err != nil {
 				panic(err)
+			}
+			if enableMouse {
+				screen.EnableMouse()
 			}
 			a.draw()
 		}
@@ -305,17 +308,19 @@ EventLoop:
 			switch event := event.(type) {
 			case *tcell.EventKey:
 				a.RLock()
-				p := a.focus
+				root := a.root
 				inputCapture := a.inputCapture
 				a.RUnlock()
 
 				// Intercept keys.
+				var draw bool
 				if inputCapture != nil {
 					event = inputCapture(event)
 					if event == nil {
 						a.draw()
 						continue // Don't forward event.
 					}
+					draw = true
 				}
 
 				// Ctrl-C closes the application.
@@ -323,14 +328,19 @@ EventLoop:
 					a.Stop()
 				}
 
-				// Pass other key events to the currently focused primitive.
-				if p != nil {
-					if handler := p.InputHandler(); handler != nil {
+				// Pass other key events to the root primitive.
+				if root != nil && root.HasFocus() {
+					if handler := root.InputHandler(); handler != nil {
 						handler(event, func(p Primitive) {
 							a.SetFocus(p)
 						})
-						a.draw()
+						draw = true
 					}
+				}
+
+				// Redraw.
+				if draw {
+					a.draw()
 				}
 			case *tcell.EventResize:
 				if time.Since(lastRedraw) < redrawPause {
@@ -347,11 +357,6 @@ EventLoop:
 				if screen == nil {
 					continue
 				}
-				newWidth, newHeight := screen.Size()
-				if newWidth == width && newHeight == height {
-					continue
-				}
-				width, height = newWidth, newHeight
 				lastRedraw = time.Now()
 				screen.Clear()
 				a.draw()
@@ -512,6 +517,14 @@ func (a *Application) Suspend(f func()) bool {
 
 	// Wait for "f" to return.
 	f()
+
+	// If stop was called in the meantime (a.screen is nil), we're done already.
+	a.RLock()
+	screen = a.screen
+	a.RUnlock()
+	if screen == nil {
+		return true
+	}
 
 	// Make a new screen.
 	var err error

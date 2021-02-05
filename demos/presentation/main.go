@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -88,8 +88,10 @@ func main() {
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlN {
 			nextSlide()
+			return nil
 		} else if event.Key() == tcell.KeyCtrlP {
 			previousSlide()
+			return nil
 		}
 		return event
 	})
